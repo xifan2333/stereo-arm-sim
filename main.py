@@ -58,21 +58,39 @@ def main_loop():
     global last_left_frame_bgr, mono_depth_map_mm, last_mono_frame_idx
 
     logger.info("正在初始化摄像头...")
-    # Placeholder for camera capture (e.g., using OpenCV VideoCapture)
-    # In a real system, you'd initialize your stereo cameras here.
+    # 尝试打开双目摄像头（单个设备，输出1280x480分辨率）
+    camera = None
     try:
-        logger.info("尝试打开左摄像头 (索引 0)...")
-        cap_l = cv2.VideoCapture(0) # Left camera, adjust index as needed
-        logger.info("尝试打开右摄像头 (索引 1)...")
-        cap_r = cv2.VideoCapture(1) # Right camera, adjust index as needed
+        for camera_index in [0, 1, 2]:
+            logger.info(f"尝试打开摄像头索引 {camera_index}...")
+            camera = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+            if camera.isOpened():
+                # 设置双目摄像头分辨率（左右拼接为1280x480）
+                camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+                # 测试读取一帧
+                ret, test_frame = camera.read()
+                if ret and test_frame is not None and test_frame.size > 0:
+                    logger.info(f"成功初始化摄像头 {camera_index}")
+                    logger.info(f"摄像头分辨率: {test_frame.shape[1]}x{test_frame.shape[0]}")
+                    break
+                else:
+                    logger.warning(f"摄像头 {camera_index} 无法读取帧")
+                    camera.release()
+                    camera = None
+            else:
+                logger.warning(f"无法打开摄像头 {camera_index}")
+        else:
+            # 所有摄像头都无法打开
+            logger.error("无法找到可用的摄像头。请检查设备连接。")
+            sys.exit(1)
     except Exception as e:
         logger.error(f"摄像头初始化异常: {e}")
         sys.exit(1)
 
-    if not cap_l.isOpened() or not cap_r.isOpened():
-        logger.error("无法打开立体摄像头。请检查设备连接或摄像头索引。")
-        logger.error(f"左摄像头状态: {'打开' if cap_l.isOpened() else '关闭'}")
-        logger.error(f"右摄像头状态: {'打开' if cap_r.isOpened() else '关闭'}")
+    if camera is None:
+        logger.error("摄像头初始化失败")
         sys.exit(1)
 
     logger.info("摄像头初始化成功！")
@@ -88,12 +106,16 @@ def main_loop():
             if frame_idx % 30 == 1:  # 每30帧输出一次
                 logger.info(f"处理第 {frame_idx} 帧...")
 
-            ret_l, frame_l = cap_l.read()
-            ret_r, frame_r = cap_r.read()
-
-            if not ret_l or not ret_r:
+            # 读取双目摄像头帧（1280x480）
+            ret, frame = camera.read()
+            if not ret or frame is None:
                 logger.error("无法获取图像帧。")
                 break
+
+            # 分离左右图像 (左: 0-640, 右: 640-1280)
+            imageWidth = CAMERA_CONFIG.image_width
+            frame_l = frame[:, :imageWidth]
+            frame_r = frame[:, imageWidth:]
 
             # 1. 图像校正 (Stereo Rectification)
             # Apply maps generated during StereoProcessor initialization
@@ -176,8 +198,8 @@ def main_loop():
         logger.error(f"发生错误: {e}")
     finally:
         logger.info("清理资源中...")
-        cap_l.release()
-        cap_r.release()
+        if camera is not None:
+            camera.release()
         cv2.destroyAllWindows()
         plt.close(plotter.fig)
         logger.info("清理完成。")
