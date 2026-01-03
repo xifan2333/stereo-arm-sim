@@ -243,7 +243,7 @@ class Plotter:
         # 添加文本到3D场景
         self.ax_3d.text(text_x, text_y, safe_z, info_text, color=color, fontsize=8, ha='center', va='bottom')
 
-    def update_display(self, current_frame_idx, max_frames, left_image, disp_color_left, detected_objects_list, total_drawn_points):
+    def update_display(self, current_frame_idx, max_frames, left_image, right_image, disp_color_left, disp_color_right, detected_objects_list, total_drawn_points):
         self.ax_3d.cla() # Clear current 3D axes
         self.ax_3d.set_xlabel("X (mm)")
         self.ax_3d.set_ylabel("Y (mm)")
@@ -263,24 +263,43 @@ class Plotter:
         for obj in detected_objects_list:
             self.draw_object_info(obj)
 
-        # Update camera image
+        # Update left camera image
         if left_image is not None:
-            self.ax_camera.clear()
+            self.ax_camera_l.clear()
             # Convert BGR to RGB for display
             if len(left_image.shape) == 3 and left_image.shape[2] == 3:
                 left_image_rgb = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
             else:
                 left_image_rgb = left_image
-            self.ax_camera.imshow(left_image_rgb)
-            self.ax_camera.set_title("左摄像头")
-            self.ax_camera.axis('off')
+            self.ax_camera_l.imshow(left_image_rgb)
+            self.ax_camera_l.set_title("左摄像头")
+            self.ax_camera_l.axis('off')
 
-        # Update disparity image
+        # Update right camera image
+        if right_image is not None:
+            self.ax_camera_r.clear()
+            # Convert BGR to RGB for display
+            if len(right_image.shape) == 3 and right_image.shape[2] == 3:
+                right_image_rgb = cv2.cvtColor(right_image, cv2.COLOR_BGR2RGB)
+            else:
+                right_image_rgb = right_image
+            self.ax_camera_r.imshow(right_image_rgb)
+            self.ax_camera_r.set_title("右摄像头")
+            self.ax_camera_r.axis('off')
+
+        # Update left disparity image
         if disp_color_left is not None:
             self.ax_disparity_l.clear()
             self.ax_disparity_l.imshow(disp_color_left)
             self.ax_disparity_l.set_title("左视差图 (彩色)")
             self.ax_disparity_l.axis('off')
+
+        # Update right disparity image
+        if disp_color_right is not None:
+            self.ax_disparity_r.clear()
+            self.ax_disparity_r.imshow(disp_color_right)
+            self.ax_disparity_r.set_title("右视差图 (彩色)")
+            self.ax_disparity_r.axis('off')
 
         # Update info text
         info = f"Frame: {current_frame_idx}/{max_frames}\n" \
