@@ -5,6 +5,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.colors as mcolors
 import numpy as np
 import logging
+import cv2
 
 from src.config import L_SECTION, ROPE_RADIUS, ROPE_OFFSETS, ROPE_COLORS, ROPE_LINEWIDTH, \
     DISC_INTERVAL, DISC_DIAMETER, DISC_RADIUS, X_RANGE, Y_RANGE, Z_RANGE, \
@@ -21,6 +22,7 @@ class Plotter:
     def __init__(self):
         self.fig = None
         self.ax_3d = None
+        self.ax_camera = None  # 摄像头原始图像
         self.ax_disparity_l = None
         self.ax_disparity_r = None
         self.ax_mono_depth = None # Placeholder if mono depth is used
@@ -30,10 +32,10 @@ class Plotter:
 
     def _setup_plot(self):
         self.fig = plt.figure(figsize=(20, 10))
-        gs = gridspec.GridSpec(2, 3, width_ratios=[1, 1, 1], height_ratios=[3, 1])
+        gs = gridspec.GridSpec(2, 4, width_ratios=[2, 1, 1, 1], height_ratios=[3, 1])
 
         # 3D 场景
-        self.ax_3d = self.fig.add_subplot(gs[0, :2], projection='3d')
+        self.ax_3d = self.fig.add_subplot(gs[0, 0], projection='3d')
         self.ax_3d.set_xlabel("X (mm)")
         self.ax_3d.set_ylabel("Y (mm)")
         self.ax_3d.set_zlabel("Z (mm)")
@@ -43,6 +45,11 @@ class Plotter:
         self.ax_3d.set_zlim(Z_RANGE)
         self.ax_3d.view_init(elev=20, azim=-60)
         self.ax_3d.set_box_aspect([np.ptp(X_RANGE), np.ptp(Y_RANGE), np.ptp(Z_RANGE)])
+
+        # 摄像头原始图像（左图）
+        self.ax_camera = self.fig.add_subplot(gs[0, 1])
+        self.ax_camera.set_title("左摄像头")
+        self.ax_camera.axis('off')
 
         # 视差图左
         self.ax_disparity_l = self.fig.add_subplot(gs[0, 2])
@@ -245,6 +252,18 @@ class Plotter:
         self.enhanced_point_cloud_visualization(detected_objects_list)
         for obj in detected_objects_list:
             self.draw_object_info(obj)
+
+        # Update camera image
+        if left_image is not None:
+            self.ax_camera.clear()
+            # Convert BGR to RGB for display
+            if len(left_image.shape) == 3 and left_image.shape[2] == 3:
+                left_image_rgb = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
+            else:
+                left_image_rgb = left_image
+            self.ax_camera.imshow(left_image_rgb)
+            self.ax_camera.set_title("左摄像头")
+            self.ax_camera.axis('off')
 
         # Update disparity image
         if disp_color_left is not None:

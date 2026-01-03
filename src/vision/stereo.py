@@ -96,22 +96,35 @@ class StereoProcessor:
 
         d = disp.astype(np.float32).copy()
 
+        # 确保没有NaN或inf
+        d = np.nan_to_num(d, nan=0.0, posinf=0.0, neginf=0.0)
+        d = np.clip(d, 0.0, None)  # 确保非负
+
         # 1) 中值滤波去孤点
         try:
-            d_med = cv2.medianBlur(d, 5)
-        except Exception:
+            # 转换为uint8进行中值滤波以避免float32的问题
+            d_max = d.max()
+            if d_max > 0:
+                d_normalized = (d / d_max * 255.0).astype(np.uint8)
+                d_med_norm = cv2.medianBlur(d_normalized, 5)
+                d_med = (d_med_norm.astype(np.float32) / 255.0) * d_max
+            else:
+                d_med = d
+        except Exception as e:
+            logger.debug(f"medianBlur failed: {e}")
             d_med = d
 
         # 2) 双边滤波保持边缘
         try:
-            d_bi = cv2.bilateralFilter(d_med, 9, 75, 75)
-        except Exception:
+            d_bi = cv2.bilateralFilter(d_med.astype(np.float32), 9, 75, 75)
+        except Exception as e:
+            logger.debug(f"bilateralFilter failed: {e}")
             d_bi = d_med
 
         # 3) 小孔洞填充（局部均值法）
         mask_invalid = (d_bi <= 0) | (~np.isfinite(d_bi))
         if mask_invalid.all():
-            return d_bi
+            return d_bi.astype(np.float32)
 
         kernel = np.ones((5, 5), dtype=np.float32)
         valid_mask = (~mask_invalid).astype(np.float32)
@@ -127,8 +140,15 @@ class StereoProcessor:
 
         # 4) 最后再一个小的 median 以收尾
         try:
-            d_out = cv2.medianBlur(d_bi, 3)
-        except Exception:
+            d_max = d_bi.max()
+            if d_max > 0:
+                d_normalized = (d_bi / d_max * 255.0).astype(np.uint8)
+                d_out_norm = cv2.medianBlur(d_normalized, 3)
+                d_out = (d_out_norm.astype(np.float32) / 255.0) * d_max
+            else:
+                d_out = d_bi
+        except Exception as e:
+            logger.debug(f"final medianBlur failed: {e}")
             d_out = d_bi
 
         return d_out.astype(np.float32)
@@ -307,18 +327,26 @@ class StereoProcessor:
                 xyz_right = np.full_like(xyz_left, np.nan, dtype=np.float32)
                 for c in range(3):
                     ch = xyz_left[:, :, c].astype(np.float32)
+                    # 将NaN替换为0进行remap，然后再恢复NaN
+                    ch_valid = np.nan_to_num(ch, nan=0.0)
                     rem = cv2.remap(
-                        ch,
+                        ch_valid,
                         map_x,
                         map_y,
                         interpolation=cv2.INTER_LINEAR,
                         borderMode=cv2.BORDER_CONSTANT,
-                        borderValue=np.nan,
+                        borderValue=0.0,
                     )
+                    # 恢复原始的NaN位置
+                    rem = rem.astype(np.float32)
+                    invalid_in_source = ~np.isfinite(ch)
+                    if invalid_in_source.any():
+                        rem[invalid_in_source] = np.nan
                     xyz_right[:, :, c] = rem
                 invalid_mask = (disp_filtered <= 0) | (~np.isfinite(xyz_left[:, :, 2]))
                 xyz_right[invalid_mask, :] = np.nan
-            except Exception:
+            except Exception as e:
+                logger.debug(f"xyz_right构造失败: {e}")
                 xyz_right = np.full_like(xyz_left, np.nan, dtype=np.float32)
 
             # 把最新的视差与点云导出成内部变量
@@ -338,7 +366,9 @@ class StereoProcessor:
             )
 
         except Exception as e:
+            import traceback
             logger.error(f"stereo_match: 异常: {e}")
+            logger.debug(f"Traceback: {traceback.format_exc()}")
             H = self.camera_config.image_height
             W = self.camera_config.image_width
             empty_xyz = np.full((H, W, 3), np.nan, dtype=np.float32)
