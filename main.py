@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import threading
 import cv2
+import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
@@ -130,6 +131,13 @@ def main_loop():
             disp_color_l, xyz_l_mm, conf_l, disp_l, disp_r, xyz_r_mm = \
                 stereo_processor.stereo_match(gray_l, gray_r)
 
+            # 生成右视差图的彩色可视化
+            if np.max(disp_r) > 0:
+                disp_r_vis = (disp_r / (np.max(disp_r) + 1e-9) * 255.0).clip(0, 255).astype(np.uint8)
+                disp_color_r = cv2.applyColorMap(disp_r_vis, cv2.COLORMAP_JET)
+            else:
+                disp_color_r = np.zeros((gray_r.shape[0], gray_r.shape[1], 3), dtype=np.uint8)
+
             # 3. 物体检测 (Object Detection)
             yolo_detections = yolo_detector.detect(rectify_frame_l)
             tracked_detections = object_tracker.update(yolo_detections)
@@ -185,7 +193,10 @@ def main_loop():
 
             # 4. 状态更新与可视化 (State Update & Visualization)
             plotter.update_display(
-                frame_idx, TOTAL_FRAMES, rectify_frame_l, disp_color_l, detected_objects, total_drawn_points
+                frame_idx, TOTAL_FRAMES,
+                rectify_frame_l, rectify_frame_r,  # 左右摄像头图像
+                disp_color_l, disp_color_r,        # 左右视差图
+                detected_objects, total_drawn_points
             )
 
             # Check for keyboard input to exit
