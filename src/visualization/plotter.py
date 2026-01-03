@@ -11,6 +11,11 @@ from src.config import L_SECTION, ROPE_RADIUS, ROPE_OFFSETS, ROPE_COLORS, ROPE_L
     TOTAL_FRAMES, SECTION_COLORS, ROPE_NAMES, TARGET_XYZ, MAX_DEPTH
 from src.utils.helpers import logger
 
+# Configure matplotlib to support Chinese characters
+import matplotlib as mpl
+mpl.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
+mpl.rcParams['axes.unicode_minus'] = False  # Fix minus sign display
+
 
 class Plotter:
     def __init__(self):
