@@ -22,17 +22,17 @@ class Plotter:
     def __init__(self):
         self.fig = None
         self.ax_3d = None
-        self.ax_camera = None  # 摄像头原始图像
+        self.ax_camera_l = None  # 左摄像头原始图像
+        self.ax_camera_r = None  # 右摄像头原始图像
         self.ax_disparity_l = None
         self.ax_disparity_r = None
-        self.ax_mono_depth = None # Placeholder if mono depth is used
         self.ax_info = None
 
         self._setup_plot()
 
     def _setup_plot(self):
-        self.fig = plt.figure(figsize=(20, 10))
-        gs = gridspec.GridSpec(2, 4, width_ratios=[2, 1, 1, 1], height_ratios=[3, 1])
+        self.fig = plt.figure(figsize=(24, 10))
+        gs = gridspec.GridSpec(2, 5, width_ratios=[2, 1, 1, 1, 1], height_ratios=[3, 1])
 
         # 3D 场景
         self.ax_3d = self.fig.add_subplot(gs[0, 0], projection='3d')
@@ -46,15 +46,25 @@ class Plotter:
         self.ax_3d.view_init(elev=20, azim=-60)
         self.ax_3d.set_box_aspect([np.ptp(X_RANGE), np.ptp(Y_RANGE), np.ptp(Z_RANGE)])
 
-        # 摄像头原始图像（左图）
-        self.ax_camera = self.fig.add_subplot(gs[0, 1])
-        self.ax_camera.set_title("左摄像头")
-        self.ax_camera.axis('off')
+        # 左摄像头原始图像
+        self.ax_camera_l = self.fig.add_subplot(gs[0, 1])
+        self.ax_camera_l.set_title("左摄像头")
+        self.ax_camera_l.axis('off')
 
-        # 视差图左
-        self.ax_disparity_l = self.fig.add_subplot(gs[0, 2])
+        # 右摄像头原始图像
+        self.ax_camera_r = self.fig.add_subplot(gs[0, 2])
+        self.ax_camera_r.set_title("右摄像头")
+        self.ax_camera_r.axis('off')
+
+        # 左视差图
+        self.ax_disparity_l = self.fig.add_subplot(gs[0, 3])
         self.ax_disparity_l.set_title("左视差图 (彩色)")
         self.ax_disparity_l.axis('off')
+
+        # 右视差图
+        self.ax_disparity_r = self.fig.add_subplot(gs[0, 4])
+        self.ax_disparity_r.set_title("右视差图 (彩色)")
+        self.ax_disparity_r.axis('off')
 
         # 信息显示
         self.ax_info = self.fig.add_subplot(gs[1, :])
