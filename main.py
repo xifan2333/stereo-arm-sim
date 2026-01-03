@@ -33,12 +33,23 @@ object_bbox_rects = {}  # 存储物体的边界框矩形
 object_3d_bboxes = {}  # 存储物体的3D包围盒
 
 # --- Initialization ---
+logger.info("正在初始化立体视觉处理器...")
 stereo_processor = StereoProcessor()
+logger.info("立体视觉处理器初始化完成")
+
+logger.info("正在加载 YOLO 模型...")
 yolo_detector = YOLODetector()
+logger.info("YOLO 模型加载完成")
+
+logger.info("正在初始化跟踪器...")
 object_tracker = SimpleTracker()
 position_tracker = PositionTracker(yolo_model_names=yolo_detector.model.names if yolo_detector.model else {})
 stabilizer = PositionStabilizer(window_size=5, ema_alpha=None) # EMA alpha could be from config
+logger.info("跟踪器初始化完成")
+
+logger.info("正在初始化可视化界面...")
 plotter = Plotter()
+logger.info("可视化界面初始化完成")
 
 xyz_lock = threading.Lock() # Global lock if multiple threads access xyz data
 
@@ -46,21 +57,36 @@ def main_loop():
     global animation_running, selected_object_id, stabilization_complete, stabilization_counter
     global last_left_frame_bgr, mono_depth_map_mm, last_mono_frame_idx
 
+    logger.info("正在初始化摄像头...")
     # Placeholder for camera capture (e.g., using OpenCV VideoCapture)
     # In a real system, you'd initialize your stereo cameras here.
-    cap_l = cv2.VideoCapture(0) # Left camera, adjust index as needed
-    cap_r = cv2.VideoCapture(1) # Right camera, adjust index as needed
+    try:
+        logger.info("尝试打开左摄像头 (索引 0)...")
+        cap_l = cv2.VideoCapture(0) # Left camera, adjust index as needed
+        logger.info("尝试打开右摄像头 (索引 1)...")
+        cap_r = cv2.VideoCapture(1) # Right camera, adjust index as needed
+    except Exception as e:
+        logger.error(f"摄像头初始化异常: {e}")
+        sys.exit(1)
 
     if not cap_l.isOpened() or not cap_r.isOpened():
         logger.error("无法打开立体摄像头。请检查设备连接或摄像头索引。")
+        logger.error(f"左摄像头状态: {'打开' if cap_l.isOpened() else '关闭'}")
+        logger.error(f"右摄像头状态: {'打开' if cap_r.isOpened() else '关闭'}")
         sys.exit(1)
+
+    logger.info("摄像头初始化成功！")
 
     frame_idx = 0
     animation_running = True
 
+    logger.info("开始主循环...")
     try:
         while animation_running:
             frame_idx += 1
+
+            if frame_idx % 30 == 1:  # 每30帧输出一次
+                logger.info(f"处理第 {frame_idx} 帧...")
 
             ret_l, frame_l = cap_l.read()
             ret_r, frame_r = cap_r.read()
