@@ -3,14 +3,10 @@ import numpy as np
 import torch
 from enum import Enum
 import os
+import importlib.util
 
-# sklearn导入和可用性检查
-try:
-    from sklearn.decomposition import PCA
-    import sklearn
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
+# sklearn可用性检查
+SKLEARN_AVAILABLE = importlib.util.find_spec("sklearn") is not None
 
 # 路径配置
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), '..', 'assets')

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import sys
 
 # Import modules from our new structure
-from src.config import CAMERA_CONFIG
+from src.config import CAMERA_CONFIG, TOTAL_FRAMES
 from src.utils.helpers import logger, get_object_id
 from src.vision.stereo import StereoProcessor
 from src.vision.detection import YOLODetector
@@ -137,7 +137,7 @@ def main_loop():
 
             # 4. 状态更新与可视化 (State Update & Visualization)
             plotter.update_display(
-                frame_idx, plotter.TOTAL_FRAMES, rectify_frame_l, disp_color_l, detected_objects, total_drawn_points
+                frame_idx, TOTAL_FRAMES, rectify_frame_l, disp_color_l, detected_objects, total_drawn_points
             )
 
             # Check for keyboard input to exit
@@ -155,3 +155,8 @@ def main_loop():
         cv2.destroyAllWindows()
         plt.close(plotter.fig)
         logger.info("清理完成。")
+
+
+if __name__ == "__main__":
+    logger.info("启动立体视觉机械臂避障系统...")
+    main_loop()
