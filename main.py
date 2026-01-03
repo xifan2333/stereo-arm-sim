@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 import threading
 import cv2
-import numpy as np
-import logging
-import time
+import matplotlib.pyplot as plt
 import sys
 
 # Import modules from our new structure
-from src.config import CAMERA_CONFIG, TARGET_XYZ, MAX_DEPTH, STABILIZATION_THRESHOLD
+from src.config import CAMERA_CONFIG
 from src.utils.helpers import logger, get_object_id
 from src.vision.stereo import StereoProcessor
 from src.vision.detection import YOLODetector
 from src.vision.tracking import SimpleTracker, PositionTracker, PositionStabilizer
-from src.geometry.pointcloud import extract_object_pointcloud, texture_mapping
+from src.geometry.pointcloud import extract_object_pointcloud
 from src.geometry.estimation import calculate_object_depth, calculate_3d_bounding_box_from_points
 from src.visualization.plotter import Plotter
 
@@ -62,7 +60,6 @@ def main_loop():
 
     try:
         while animation_running:
-            start_time = time.time()
             frame_idx += 1
 
             ret_l, frame_l = cap_l.read()
@@ -89,7 +86,6 @@ def main_loop():
             yolo_detections = yolo_detector.detect(rectify_frame_l)
             tracked_detections = object_tracker.update(yolo_detections)
 
-            current_detected_objects_info = []
             total_drawn_points = 0
 
             with detected_objects_lock:
@@ -148,8 +144,6 @@ def main_loop():
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 animation_running = False
 
-            end_time = time.time()
-            # print(f"Frame {frame_idx} processed in {(end_time - start_time):.3f} seconds")
     except KeyboardInterrupt:
         logger.info("用户中断程序。")
     except Exception as e:

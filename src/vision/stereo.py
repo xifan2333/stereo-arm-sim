@@ -78,12 +78,11 @@ class StereoProcessor:
     def verify_calibration(self):
         """验证标定参数合理性"""
         R = self.camera_config.rotation_matrix
-        T = self.camera_config.translation_vector
         det_R = np.linalg.det(R)
         if abs(det_R - 1.0) > 0.01:
             logger.warning(f"警告: 旋转矩阵行列式应为1 (当前: {det_R:.6f})")
-        I = np.eye(3)
-        diff = np.abs(np.dot(R, R.T) - I)
+        identity_matrix = np.eye(3)
+        diff = np.abs(np.dot(R, R.T) - identity_matrix)
         if np.max(diff) > 0.01:
             logger.warning("警告: 旋转矩阵不是正交矩阵")
         logger.info("标定验证完成")
