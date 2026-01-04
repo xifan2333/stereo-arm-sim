@@ -2,12 +2,15 @@
 基于双目视觉三维重建技术的机械臂控制系统
 主程序入口
 
-遵循小步骤迭代原则，当前实现摄像头打开和显示功能
+遵循小步骤迭代原则，当前实现：
+1. 摄像头打开和显示
+2. 视差计算和显示
 """
 
 import cv2
 from src.utils.logger import setup_logger, get_logger
 from src.vision.camera import StereoCamera
+from src.vision.stereo import StereoMatcher
 
 
 def main():
@@ -27,7 +30,16 @@ def main():
         logger.error("无法打开摄像头，程序退出")
         return
 
-    logger.info("摄像头已就绪，按 'q' 或 ESC 键退出")
+    # 创建立体匹配器
+    logger.info("初始化立体匹配器...")
+    try:
+        stereo_matcher = StereoMatcher()
+    except Exception as e:
+        logger.error(f"立体匹配器初始化失败: {e}")
+        camera.release()
+        return
+
+    logger.info("系统就绪，按 'q' 或 ESC 键退出")
 
     try:
         while True:
@@ -40,6 +52,18 @@ def main():
 
             # 显示左右画面
             camera.show_frames(frame_left, frame_right)
+
+            # 计算视差
+            try:
+                disp_left, disp_right, disp_color = stereo_matcher.compute_disparity(
+                    frame_left, frame_right
+                )
+
+                # 显示视差图
+                stereo_matcher.show_disparity(disp_color, disp_right)
+
+            except Exception as e:
+                logger.error(f"视差计算错误: {e}")
 
             # 检查退出键
             key = cv2.waitKey(1) & 0xFF

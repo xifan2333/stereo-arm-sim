@@ -22,6 +22,64 @@ camera:
     left: "left"
     right: "right"
 
+# 相机标定参数
+# 注意：这些参数需要根据实际相机重新标定
+calibration:
+  # 左相机内参矩阵
+  camera_matrix_left:
+    - [410.3084, -0.2777, 309.3976]
+    - [0.0, 410.2129, 262.0564]
+    - [0.0, 0.0, 1.0]
+
+  # 左相机畸变系数
+  dist_coeffs_left: [0.0027, 0.6848, -0.0043, 0.0066, -2.0220]
+
+  # 右相机内参矩阵
+  camera_matrix_right:
+    - [409.2531, -0.3487, 299.1536]
+    - [0.0, 408.9821, 265.7137]
+    - [0.0, 0.0, 1.0]
+
+  # 右相机畸变系数
+  dist_coeffs_right: [0.0357, 0.3211, -0.0042, 0.0035, -0.7268]
+
+  # 旋转矩阵 R (3x3)
+  R:
+    - [0.999780788646075, 0.0004806193456666200, 0.020931881407937]
+    - [-0.0004322695666685383, 0.999997228514369, -0.0006092913311984787]
+    - [-0.020932935705560, 0.002304770839986, 0.999778225525102]
+
+  # 平移向量 T (单位：毫米，基线长度≈61.4mm)
+  T: [-61.114637167122600, -0.044597478744966, 0.583576573837856]
+
+  # 图像尺寸
+  image_size: [640, 480]  # [width, height]
+
+# 立体匹配配置 (SGBM)
+stereo_matching:
+  # SGBM 基本参数
+  window_size: 5
+  min_disparity: 0
+  num_disparities: 128  # 必须是16的倍数
+
+  # SGBM 高级参数
+  uniqueness_ratio: 12
+  speckle_window_size: 200
+  speckle_range: 2
+  disp12_max_diff: 2
+  pre_filter_cap: 63
+  mode: "SGBM_3WAY"  # SGBM, SGBM_3WAY, HH, HH4
+
+  # 预处理
+  use_clahe: true
+  clahe_clip_limit: 2.0
+  clahe_tile_size: [8, 8]
+
+  # 显示窗口
+  windows:
+    disparity_left: "Disparity Left"
+    disparity_right: "Disparity Right"
+
 
 # 日志配置
 logging:

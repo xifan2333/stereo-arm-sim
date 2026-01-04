@@ -3,5 +3,6 @@
 """
 
 from .camera import StereoCamera
+from .stereo import StereoMatcher
 
-__all__ = ['StereoCamera']
+__all__ = ['StereoCamera', 'StereoMatcher']
