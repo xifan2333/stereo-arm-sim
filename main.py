@@ -5,12 +5,14 @@
 遵循小步骤迭代原则，当前实现：
 1. 摄像头打开和显示
 2. 视差计算和显示
+3. YOLO 物体检测和分割
 """
 
 import cv2
 from src.utils.logger import setup_logger, get_logger
 from src.vision.camera import StereoCamera
 from src.vision.stereo import StereoMatcher
+from src.detection.detector import YOLODetector
 
 
 def main():
@@ -39,6 +41,15 @@ def main():
         camera.release()
         return
 
+    # 创建 YOLO 检测器
+    logger.info("初始化 YOLO 检测器...")
+    try:
+        detector = YOLODetector()
+    except Exception as e:
+        logger.error(f"YOLO 检测器初始化失败: {e}")
+        camera.release()
+        return
+
     logger.info("系统就绪，按 'q' 或 ESC 键退出")
 
     try:
@@ -64,6 +75,21 @@ def main():
 
             except Exception as e:
                 logger.error(f"视差计算错误: {e}")
+
+            # YOLO 检测（在左图上）
+            try:
+                detections = detector.detect(frame_left)
+
+                # 可视化检测结果
+                vis_image = detector.visualize(frame_left, detections)
+                detector.show_detections(vis_image)
+
+                # 输出检测信息
+                if len(detections) > 0:
+                    logger.debug(f"检测到 {len(detections)} 个物体")
+
+            except Exception as e:
+                logger.error(f"YOLO 检测错误: {e}")
 
             # 检查退出键
             key = cv2.waitKey(1) & 0xFF

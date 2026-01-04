@@ -97,6 +97,31 @@ stereo_matching:
     disparity_left: "Disparity Left"
     disparity_right: "Disparity Right"
 
+# YOLO 检测配置
+detection:
+  # 模型配置
+  model_path: "yolo11s-seg.pt"  # 使用分割模型
+  device: "cuda:0"  # cuda:0 或 cpu
+
+  # 推理参数
+  conf_threshold: 0.25  # 置信度阈值
+  iou_threshold: 0.45  # NMS IoU 阈值
+  max_det: 100  # 最大检测数量
+
+  # 只检测特定类别（可选，null 表示检测所有类别）
+  classes: null  # 例如 [0, 39, 41] 表示只检测 person, bottle, cup
+
+  # 可视化
+  show_boxes: true  # 显示边界框
+  show_masks: true  # 显示分割掩码
+  show_labels: true  # 显示类别标签
+  show_conf: true  # 显示置信度
+  line_width: 2  # 边框线宽
+  mask_alpha: 0.3  # 掩码透明度
+
+  # 显示窗口
+  window: "YOLO Detection"
+
 
 # 日志配置
 logging:
