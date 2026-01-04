@@ -10,7 +10,9 @@
 """
 
 import cv2
+import numpy as np
 from src.utils.logger import setup_logger, get_logger
+from src.utils.config import config
 from src.vision.camera import StereoCamera
 from src.vision.stereo import StereoMatcher
 from src.detection.detector import YOLODetector
@@ -26,6 +28,14 @@ def main():
 
     logger.info("=== 基于双目视觉三维重建技术的机械臂控制系统 ===")
     logger.info("初始化中...")
+
+    # 读取配置
+    detection_config = config.get_section("detection")
+    show_3d_info = detection_config.get("show_3d_info", True)
+    info_bg_color = tuple(detection_config.get("info_bg_color", [255, 255, 255]))
+    info_text_color = tuple(detection_config.get("info_text_color", [0, 0, 0]))
+    info_font_scale = detection_config.get("info_font_scale", 0.4)
+    info_thickness = detection_config.get("info_thickness", 1)
 
     # 创建摄像头对象
     camera = StereoCamera()
@@ -106,6 +116,14 @@ def main():
                                 xyz_pointcloud, mask=det.mask, bbox=det.bbox
                             )
 
+                            # 调试：打印点云分布
+                            if len(obj_points) > 0:
+                                logger.info(
+                                    f"点云X范围: [{np.min(obj_points[:, 0]):.1f}, {np.max(obj_points[:, 0]):.1f}] mm, "
+                                    f"Y范围: [{np.min(obj_points[:, 1]):.1f}, {np.max(obj_points[:, 1]):.1f}] mm, "
+                                    f"Z范围: [{np.min(obj_points[:, 2]):.1f}, {np.max(obj_points[:, 2]):.1f}] mm"
+                                )
+
                             # 计算3D中心和尺寸
                             center_mm, dims_mm, confidence = calculate_object_3d_info(
                                 obj_points
@@ -120,6 +138,44 @@ def main():
                                 f"{det.cls_name} 相机坐标系尺寸(mm): "
                                 f"X={dims_mm[0]:.1f}, Y={dims_mm[1]:.1f}, Z={dims_mm[2]:.1f}"
                             )
+
+                            # 在检测图像上显示3D信息
+                            if show_3d_info:
+                                info_text = (
+                                    f"Pos: ({center_cm[0]:.1f}, {center_cm[1]:.1f}, {center_cm[2]:.1f}) cm\n"
+                                    f"Size: ({dims_cm[0]:.1f}, {dims_cm[1]:.1f}, {dims_cm[2]:.1f}) cm"
+                                )
+
+                                # 在检测框上方显示信息（白底黑字）
+                                y_offset = det.y1 - 40
+                                font = cv2.FONT_HERSHEY_SIMPLEX
+
+                                for i, line in enumerate(info_text.split("\n")):
+                                    # 计算文本尺寸
+                                    (text_w, text_h), baseline = cv2.getTextSize(
+                                        line, font, info_font_scale, info_thickness
+                                    )
+
+                                    # 绘制白色背景
+                                    y_pos = y_offset + i * 15
+                                    cv2.rectangle(
+                                        vis_image,
+                                        (det.x1, y_pos - text_h - 2),
+                                        (det.x1 + text_w + 4, y_pos + baseline),
+                                        info_bg_color,
+                                        -1,
+                                    )
+
+                                    # 绘制黑色文字
+                                    cv2.putText(
+                                        vis_image,
+                                        line,
+                                        (det.x1 + 2, y_pos),
+                                        font,
+                                        info_font_scale,
+                                        info_text_color,
+                                        info_thickness,
+                                    )
 
                             # 添加物体到3D场景
                             obj_info = {
