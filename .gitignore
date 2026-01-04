@@ -8,5 +8,14 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Logs and data
+**.log
+data/
+
+# Claude Code
 .claude
 CLAUDE.md
+
+# Backup files
+backup.py

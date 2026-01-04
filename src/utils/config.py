@@ -28,8 +28,8 @@ class Config:
 
     def _load_config(self) -> None:
         """加载配置文件"""
-        # 配置文件路径（项目根目录的 config/config.yaml）
-        config_path = Path(__file__).parent.parent.parent / "config" / "config.yaml"
+        # 配置文件路径（项目根目录的 config.yaml）
+        config_path = Path(__file__).parent.parent.parent / "config.yaml"
 
         if not config_path.exists():
             raise FileNotFoundError(f"配置文件不存在: {config_path}")
