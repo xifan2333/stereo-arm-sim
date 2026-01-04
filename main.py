@@ -15,6 +15,7 @@ from src.vision.camera import StereoCamera
 from src.vision.stereo import StereoMatcher
 from src.detection.detector import YOLODetector
 from src.reconstruction.pointcloud import extract_object_pointcloud, calculate_object_3d_info
+from src.visualization import Viewer3D
 
 
 def main():
@@ -52,6 +53,16 @@ def main():
         camera.release()
         return
 
+    # 创建 3D 可视化器
+    logger.info("初始化 3D 可视化器...")
+    try:
+        viewer3d = Viewer3D()
+        viewer3d.show(block=False)  # 非阻塞模式显示
+    except Exception as e:
+        logger.error(f"3D 可视化器初始化失败: {e}")
+        camera.release()
+        return
+
     logger.info("系统就绪，按 'q' 或 ESC 键退出")
 
     try:
@@ -85,6 +96,9 @@ def main():
 
                 # 可视化检测结果
                 vis_image = detector.visualize(frame_left, detections)
+
+                # 清空3D场景
+                viewer3d.clear()
 
                 # 如果有检测结果且点云可用，计算3D信息
                 if len(detections) > 0 and xyz_pointcloud is not None:
@@ -144,12 +158,25 @@ def main():
                                     thickness,
                                 )
 
+                            # 添加物体到3D场景
+                            obj_info = {
+                                'center_cm': center_cm,
+                                'dims_cm': dims_cm,
+                                'points': obj_points / 10.0,  # 转为厘米
+                                'class_name': det.cls_name,
+                                'confidence': confidence
+                            }
+                            viewer3d.add_object(obj_info)
+
                             logger.debug(
                                 f"{det.cls_name}: 位置={center_cm}, 尺寸={dims_cm}, 置信度={confidence:.2f}"
                             )
 
                         except Exception as e:
                             logger.warning(f"物体 {det.cls_name} 3D信息提取失败: {e}")
+
+                # 更新3D显示
+                viewer3d.update()
 
                 # 显示检测结果
                 detector.show_detections(vis_image)
@@ -176,6 +203,7 @@ def main():
         # 清理资源
         logger.info("清理资源中...")
         camera.release()
+        viewer3d.close()
         logger.success("程序已正常退出")
 
 
