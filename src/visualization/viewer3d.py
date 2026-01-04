@@ -255,7 +255,9 @@ class Viewer3D:
 
     def update(self):
         """更新显示所有检测到的物体"""
-        self.clear()
+        # 清空画布但保留物体列表
+        self.ax.clear()
+        self._setup_scene()
 
         for obj in self.detected_objects:
             # 绘制点云
@@ -288,6 +290,9 @@ class Viewer3D:
                 plt.draw()
             except Exception:
                 pass
+
+        # 清空物体列表，为下一帧做准备
+        self.detected_objects = []
 
     def show(self, block: bool = False):
         """

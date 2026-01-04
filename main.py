@@ -97,9 +97,6 @@ def main():
                 # 可视化检测结果
                 vis_image = detector.visualize(frame_left, detections)
 
-                # 清空3D场景
-                viewer3d.clear()
-
                 # 如果有检测结果且点云可用，计算3D信息
                 if len(detections) > 0 and xyz_pointcloud is not None:
                     for det in detections:
