@@ -115,6 +115,12 @@ def main():
                             center_cm = center_mm / 10.0
                             dims_cm = dims_mm / 10.0
 
+                            # 调试：打印相机坐标系的尺寸
+                            logger.info(
+                                f"{det.cls_name} 相机坐标系尺寸(mm): "
+                                f"X={dims_mm[0]:.1f}, Y={dims_mm[1]:.1f}, Z={dims_mm[2]:.1f}"
+                            )
+
                             # 添加物体到3D场景
                             obj_info = {
                                 'center_cm': center_cm,
