@@ -136,13 +136,8 @@ def calculate_object_3d_info(
     else:
         center = np.mean(points_filtered, axis=0)
 
-    # 计算尺寸
-    if len(points_filtered) >= 10:
-        # 使用 PCA 方法估计尺寸
-        dimensions = _estimate_dimensions_pca(points_filtered)
-    else:
-        # 使用简单的范围方法
-        dimensions = _estimate_dimensions_range(points_filtered)
+    # 计算尺寸（使用范围方法保持XYZ对应关系）
+    dimensions = _estimate_dimensions_range(points_filtered)
 
     # 计算置信度（基于点数和深度变异系数）
     confidence = _calculate_confidence(points_filtered)
