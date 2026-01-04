@@ -121,8 +121,8 @@ detection:
 
   # 3D尺寸信息显示
   show_3d_info: true  # 是否显示3D位置和尺寸
-  info_bg_color: [255, 255, 255]  # 信息背景色 (白色)
-  info_text_color: [0, 0, 0]  # 信息文字颜色 (黑色)
+  info_bg_color: [0, 0, 0]  # 信息背景色 (黑色)
+  info_text_color: [255, 255, 255]  # 信息文字颜色 (白色)
   info_font_scale: 0.4
   info_thickness: 1
 
