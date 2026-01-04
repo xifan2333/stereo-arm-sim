@@ -239,17 +239,17 @@ class StereoMatcher:
 
     def compute_disparity(
         self, frame_left: np.ndarray, frame_right: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        计算视差图
+        计算视差图和3D点云
 
         Args:
             frame_left: 左图像
             frame_right: 右图像
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]:
-                (左视差图, 右视差图, 左视差彩色可视化)
+            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                (左视差图, 右视差图, 左视差彩色可视化, 3D点云)
         """
         # 校正图像
         rect_left, rect_right = self.rectify_images(frame_left, frame_right)
@@ -286,7 +286,28 @@ class StereoMatcher:
         # 生成伪彩色可视化
         disp_color = self._visualize_disparity(disp_left)
 
-        return disp_left, disp_right, disp_color
+        # 生成3D点云
+        xyz_pointcloud = self._generate_pointcloud(disp_left)
+
+        return disp_left, disp_right, disp_color, xyz_pointcloud
+
+    def _generate_pointcloud(self, disparity: np.ndarray) -> np.ndarray:
+        """
+        从视差图生成3D点云
+
+        Args:
+            disparity: 视差图
+
+        Returns:
+            np.ndarray: 3D点云 (HxWx3), 单位：毫米
+        """
+        # 使用 Q 矩阵进行3D重投影
+        xyz = cv2.reprojectImageTo3D(disparity.astype(np.float32), self.Q)
+
+        # 转换为 float32 并确保单位为毫米
+        xyz = xyz.astype(np.float32)
+
+        return xyz
 
     def _postprocess_disparity(self, disparity: np.ndarray) -> np.ndarray:
         """

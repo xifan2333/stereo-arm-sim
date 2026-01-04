@@ -6,6 +6,7 @@
 1. 摄像头打开和显示
 2. 视差计算和显示
 3. YOLO 物体检测和分割
+4. 三维重建（提取物体3D信息）
 """
 
 import cv2
@@ -13,6 +14,7 @@ from src.utils.logger import setup_logger, get_logger
 from src.vision.camera import StereoCamera
 from src.vision.stereo import StereoMatcher
 from src.detection.detector import YOLODetector
+from src.reconstruction.pointcloud import extract_object_pointcloud, calculate_object_3d_info
 
 
 def main():
@@ -64,10 +66,10 @@ def main():
             # 显示左右画面
             camera.show_frames(frame_left, frame_right)
 
-            # 计算视差
+            # 计算视差和3D点云
             try:
-                disp_left, disp_right, disp_color = stereo_matcher.compute_disparity(
-                    frame_left, frame_right
+                disp_left, disp_right, disp_color, xyz_pointcloud = (
+                    stereo_matcher.compute_disparity(frame_left, frame_right)
                 )
 
                 # 显示视差图
@@ -75,6 +77,7 @@ def main():
 
             except Exception as e:
                 logger.error(f"视差计算错误: {e}")
+                xyz_pointcloud = None
 
             # YOLO 检测（在左图上）
             try:
@@ -82,11 +85,54 @@ def main():
 
                 # 可视化检测结果
                 vis_image = detector.visualize(frame_left, detections)
-                detector.show_detections(vis_image)
 
-                # 输出检测信息
-                if len(detections) > 0:
-                    logger.debug(f"检测到 {len(detections)} 个物体")
+                # 如果有检测结果且点云可用，计算3D信息
+                if len(detections) > 0 and xyz_pointcloud is not None:
+                    for det in detections:
+                        # 提取物体点云
+                        try:
+                            obj_points = extract_object_pointcloud(
+                                xyz_pointcloud, mask=det.mask, bbox=det.bbox
+                            )
+
+                            # 计算3D中心和尺寸
+                            center_mm, dims_mm, confidence = calculate_object_3d_info(
+                                obj_points
+                            )
+
+                            # 转换为厘米显示
+                            center_cm = center_mm / 10.0
+                            dims_cm = dims_mm / 10.0
+
+                            # 在图像上显示3D信息
+                            info_text = (
+                                f"Pos: ({center_cm[0]:.1f}, {center_cm[1]:.1f}, {center_cm[2]:.1f}) cm\n"
+                                f"Size: ({dims_cm[0]:.1f}, {dims_cm[1]:.1f}, {dims_cm[2]:.1f}) cm\n"
+                                f"Conf: {confidence:.2f}"
+                            )
+
+                            # 在检测框上方显示信息
+                            y_offset = det.y1 - 60
+                            for i, line in enumerate(info_text.split("\n")):
+                                cv2.putText(
+                                    vis_image,
+                                    line,
+                                    (det.x1, y_offset + i * 15),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    0.4,
+                                    (0, 255, 255),
+                                    1,
+                                )
+
+                            logger.debug(
+                                f"{det.cls_name}: 位置={center_cm}, 尺寸={dims_cm}, 置信度={confidence:.2f}"
+                            )
+
+                        except Exception as e:
+                            logger.warning(f"物体 {det.cls_name} 3D信息提取失败: {e}")
+
+                # 显示检测结果
+                detector.show_detections(vis_image)
 
             except Exception as e:
                 logger.error(f"YOLO 检测错误: {e}")
