@@ -132,7 +132,7 @@ reconstruction:
     # 坐标轴范围 (mm)
     x_range: [-400, 400]  # 左右各40cm
     y_range: [0, 800]     # 深度0-80cm
-    z_range: [-300, 400]  # 垂直-30cm到40cm
+    z_range: [-400, 400]  # 垂直-30cm到40cm
 
     # 坐标轴指示器长度 (mm)
     axis_length: 200
