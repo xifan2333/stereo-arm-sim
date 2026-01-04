@@ -138,15 +138,43 @@ class StereoMatcher:
             blockSize=window_size,
             P1=P1,
             P2=P2,
-            disp12MaxDiff=self.stereo_config.get("disp12_max_diff", 2),
-            uniquenessRatio=self.stereo_config.get("uniqueness_ratio", 12),
-            speckleWindowSize=self.stereo_config.get("speckle_window_size", 200),
-            speckleRange=self.stereo_config.get("speckle_range", 2),
+            disp12MaxDiff=self.stereo_config.get("disp12_max_diff", 1),
+            uniquenessRatio=self.stereo_config.get("uniqueness_ratio", 15),
+            speckleWindowSize=self.stereo_config.get("speckle_window_size", 100),
+            speckleRange=self.stereo_config.get("speckle_range", 1),
             preFilterCap=self.stereo_config.get("pre_filter_cap", 63),
             mode=mode,
         )
 
-        # 创建右匹配器（用于可视化）
+        # 尝试创建 WLS 滤波器（需要 opencv-contrib）
+        self.use_wls = False
+        self.wls_filter = None
+        postprocess_config = self.stereo_config.get("postprocess", {})
+
+        if postprocess_config.get("use_wls", True):
+            try:
+                self.right_matcher = cv2.ximgproc.createRightMatcher(self.left_matcher)
+                self.wls_filter = cv2.ximgproc.createDisparityWLSFilter(self.left_matcher)
+                self.wls_filter.setLambda(postprocess_config.get("wls_lambda", 8000.0))
+                self.wls_filter.setSigmaColor(postprocess_config.get("wls_sigma", 1.5))
+                self.use_wls = True
+                logger.info("WLS 滤波器初始化成功")
+            except AttributeError:
+                logger.warning("opencv-contrib 不可用，使用标准右匹配器")
+                self._create_standard_right_matcher(
+                    min_disp, num_disp, window_size, P1, P2, mode
+                )
+        else:
+            self._create_standard_right_matcher(
+                min_disp, num_disp, window_size, P1, P2, mode
+            )
+
+        logger.info(f"SGBM 匹配器初始化完成 (模式: {mode_name}, WLS: {self.use_wls})")
+
+    def _create_standard_right_matcher(
+        self, min_disp: int, num_disp: int, window_size: int, P1: int, P2: int, mode: int
+    ) -> None:
+        """创建标准右匹配器"""
         self.right_matcher = cv2.StereoSGBM_create(
             minDisparity=min_disp,
             numDisparities=num_disp,
@@ -160,8 +188,6 @@ class StereoMatcher:
             preFilterCap=63,
             mode=mode,
         )
-
-        logger.info(f"SGBM 匹配器初始化完成 (模式: {mode_name})")
 
     def rectify_images(
         self, frame_left: np.ndarray, frame_right: np.ndarray
@@ -237,13 +263,24 @@ class StereoMatcher:
             np.float32
         ) / 16.0
 
-        # 计算右视差（用于可视化）
+        # 计算右视差
         disp_right_raw = self.right_matcher.compute(proc_right, proc_left).astype(
             np.float32
         ) / 16.0
 
-        # 后处理：清理负值和 NaN
-        disp_left = self._postprocess_disparity(disp_left_raw)
+        # 应用 WLS 滤波或标准后处理
+        if self.use_wls and self.wls_filter is not None:
+            try:
+                disp_left = self.wls_filter.filter(
+                    disp_left_raw, proc_left, None, disp_right_raw
+                ).astype(np.float32)
+            except Exception as e:
+                logger.warning(f"WLS 滤波失败，使用标准后处理: {e}")
+                disp_left = self._postprocess_disparity(disp_left_raw)
+        else:
+            disp_left = self._postprocess_disparity(disp_left_raw)
+
+        # 后处理右视差
         disp_right = self._postprocess_disparity(disp_right_raw)
 
         # 生成伪彩色可视化
@@ -265,6 +302,25 @@ class StereoMatcher:
 
         # 清理 NaN 和负值
         disp[~np.isfinite(disp)] = 0.0
+        disp[disp < 0] = 0.0
+
+        postprocess_config = self.stereo_config.get("postprocess", {})
+
+        # 中值滤波（去除椒盐噪声）
+        if postprocess_config.get("median_filter", True):
+            kernel_size = postprocess_config.get("median_kernel_size", 5)
+            disp = cv2.medianBlur(disp.astype(np.float32), kernel_size)
+
+        # 双边滤波（保边平滑）
+        if postprocess_config.get("bilateral_filter", True):
+            d = postprocess_config.get("bilateral_d", 5)
+            sigma_color = postprocess_config.get("bilateral_sigma_color", 9.0)
+            sigma_space = postprocess_config.get("bilateral_sigma_space", 7.0)
+            disp = cv2.bilateralFilter(
+                disp.astype(np.float32), d, sigma_color, sigma_space
+            )
+
+        # 再次清理负值
         disp[disp < 0] = 0.0
 
         return disp
