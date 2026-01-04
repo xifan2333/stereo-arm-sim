@@ -1,0 +1,4 @@
+2026-01-04 14:41:27.620 | ERROR    | __main__:<module>:19 - 这是 ERROR 级别日志
+2026-01-04 14:41:27.620 | CRITICAL | __main__:<module>:20 - 这是 CRITICAL 级别日志
+2026-01-04 14:41:50.528 | ERROR    | __main__:<module>:19 - 这是 ERROR 级别日志
+2026-01-04 14:41:50.528 | CRITICAL | __main__:<module>:20 - 这是 CRITICAL 级别日志

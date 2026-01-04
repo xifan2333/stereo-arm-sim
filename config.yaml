@@ -1,0 +1,55 @@
+# 全局配置文件
+# 遵循小步骤迭代原则，仅包含基础必要配置
+
+# 摄像头配置
+camera:
+  # 双目摄像头分辨率
+  width: 1280  # 总宽度(左右两个画面)
+  height: 480
+
+  # 单目画面分辨率
+  single_width: 640  # 单个画面宽度
+  single_height: 480
+
+  # 摄像头索引
+  camera_indices: [0, 1, 2]  # 尝试的摄像头索引列表
+
+  # API后端
+  backend: "DSHOW"  # Windows使用DSHOW, Linux使用V4L2
+
+  # 显示窗口
+  windows:
+    left: "left"
+    right: "right"
+
+
+# 日志配置
+logging:
+  level: INFO  # TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL
+  format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+
+  # 控制台输出
+  console:
+    enabled: true
+    colorize: true
+
+  # 文件输出
+  file:
+    enabled: true
+    path: "data/logs/stereo-arm-sim.log"
+    rotation: "100 MB"
+    retention: "7 days"
+    compression: "zip"
+    encoding: "utf-8"
+
+  # 错误日志单独输出
+  error_file:
+    enabled: true
+    path: "data/logs/error.log"
+    rotation: "50 MB"
+    retention: "30 days"
+    compression: "zip"
+    encoding: "utf-8"
+    level: "ERROR"
+
+
