@@ -111,17 +111,37 @@ def main():
                                 f"Conf: {confidence:.2f}"
                             )
 
-                            # 在检测框上方显示信息
+                            # 在检测框上方显示信息（黑底白字）
                             y_offset = det.y1 - 60
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            font_scale = 0.4
+                            thickness = 1
+
                             for i, line in enumerate(info_text.split("\n")):
+                                # 计算文本尺寸
+                                (text_w, text_h), baseline = cv2.getTextSize(
+                                    line, font, font_scale, thickness
+                                )
+
+                                # 绘制黑色背景
+                                y_pos = y_offset + i * 15
+                                cv2.rectangle(
+                                    vis_image,
+                                    (det.x1, y_pos - text_h - 2),
+                                    (det.x1 + text_w + 4, y_pos + baseline),
+                                    (0, 0, 0),  # 黑色背景
+                                    -1,
+                                )
+
+                                # 绘制白色文字
                                 cv2.putText(
                                     vis_image,
                                     line,
-                                    (det.x1, y_offset + i * 15),
-                                    cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.4,
-                                    (0, 255, 255),
-                                    1,
+                                    (det.x1 + 2, y_pos),
+                                    font,
+                                    font_scale,
+                                    (255, 255, 255),  # 白色文字
+                                    thickness,
                                 )
 
                             logger.debug(
