@@ -15,7 +15,7 @@ from src.vision.camera import StereoCamera
 from src.vision.stereo import StereoMatcher
 from src.detection.detector import YOLODetector
 from src.reconstruction.pointcloud import extract_object_pointcloud, calculate_object_3d_info
-from src.visualization import Viewer3D
+from src.reconstruction import Viewer3D
 
 
 def main():
@@ -111,49 +111,9 @@ def main():
                                 obj_points
                             )
 
-                            # 转换为厘米显示
+                            # 转换为厘米
                             center_cm = center_mm / 10.0
                             dims_cm = dims_mm / 10.0
-
-                            # 在图像上显示3D信息
-                            info_text = (
-                                f"Pos: ({center_cm[0]:.1f}, {center_cm[1]:.1f}, {center_cm[2]:.1f}) cm\n"
-                                f"Size: ({dims_cm[0]:.1f}, {dims_cm[1]:.1f}, {dims_cm[2]:.1f}) cm\n"
-                                f"Conf: {confidence:.2f}"
-                            )
-
-                            # 在检测框上方显示信息（黑底白字）
-                            y_offset = det.y1 - 60
-                            font = cv2.FONT_HERSHEY_SIMPLEX
-                            font_scale = 0.4
-                            thickness = 1
-
-                            for i, line in enumerate(info_text.split("\n")):
-                                # 计算文本尺寸
-                                (text_w, text_h), baseline = cv2.getTextSize(
-                                    line, font, font_scale, thickness
-                                )
-
-                                # 绘制黑色背景
-                                y_pos = y_offset + i * 15
-                                cv2.rectangle(
-                                    vis_image,
-                                    (det.x1, y_pos - text_h - 2),
-                                    (det.x1 + text_w + 4, y_pos + baseline),
-                                    (0, 0, 0),  # 黑色背景
-                                    -1,
-                                )
-
-                                # 绘制白色文字
-                                cv2.putText(
-                                    vis_image,
-                                    line,
-                                    (det.x1 + 2, y_pos),
-                                    font,
-                                    font_scale,
-                                    (255, 255, 255),  # 白色文字
-                                    thickness,
-                                )
 
                             # 添加物体到3D场景
                             obj_info = {

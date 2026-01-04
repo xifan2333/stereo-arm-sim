@@ -15,6 +15,7 @@ from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from typing import List, Dict, Optional, Tuple
 from src.utils.logger import get_logger
+from src.utils.config import config
 
 logger = get_logger()
 
@@ -59,20 +60,41 @@ def transform_camera_to_viz(points: np.ndarray, unit_mm: bool = True) -> np.ndar
 class Viewer3D:
     """3D可视化器类"""
 
-    def __init__(self,
-                 figsize: Tuple[int, int] = (12, 9),
-                 x_range: Tuple[float, float] = (-1500, 1500),
-                 y_range: Tuple[float, float] = (-1500, 1500),
-                 z_range: Tuple[float, float] = (-1000, 1500)):
-        """
-        初始化3D可视化器
+    def __init__(self):
+        """初始化3D可视化器，从配置文件读取参数"""
+        # 读取配置
+        viewer_config = config.get_section("reconstruction").get("viewer", {})
 
-        Args:
-            figsize: 图形尺寸 (宽, 高)
-            x_range: X轴范围 (mm)
-            y_range: Y轴范围 (mm)
-            z_range: Z轴范围 (mm)
-        """
+        # 图形尺寸
+        figsize = tuple(viewer_config.get("figsize", [12, 9]))
+
+        # 坐标轴范围
+        self.x_range = tuple(viewer_config.get("x_range", [-400, 400]))
+        self.y_range = tuple(viewer_config.get("y_range", [0, 800]))
+        self.z_range = tuple(viewer_config.get("z_range", [-300, 400]))
+
+        # 其他参数
+        self.axis_length = viewer_config.get("axis_length", 200)
+        self.window_title = viewer_config.get("window_title", "三维物体重建")
+
+        # 点云配置
+        pc_config = viewer_config.get("pointcloud", {})
+        self.pc_color = pc_config.get("color", "cyan")
+        self.pc_size = pc_config.get("size", 2.0)
+        self.pc_alpha = pc_config.get("alpha", 0.5)
+        self.pc_max_points = pc_config.get("max_points", 2000)
+
+        # 包围盒配置
+        bbox_config = viewer_config.get("bbox", {})
+        self.bbox_color = bbox_config.get("color", "lime")
+        self.bbox_linewidth = bbox_config.get("linewidth", 2.0)
+
+        # 标签配置
+        label_config = viewer_config.get("label", {})
+        self.label_color = label_config.get("color", "white")
+        self.label_fontsize = label_config.get("fontsize", 9)
+        self.label_offset_z = label_config.get("offset_z", 50)
+
         # 启用交互模式
         plt.ion()
 
@@ -83,11 +105,6 @@ class Viewer3D:
         # 创建图形和3D轴
         self.fig = plt.figure(figsize=figsize)
         self.ax = self.fig.add_subplot(111, projection='3d')
-
-        # 设置坐标系范围
-        self.x_range = x_range
-        self.y_range = y_range
-        self.z_range = z_range
 
         # 存储检测到的物体
         self.detected_objects = []
@@ -105,16 +122,15 @@ class Viewer3D:
         self.ax.set_xlabel('X轴 (mm)', fontsize=10)
         self.ax.set_ylabel('Y轴 (mm)', fontsize=10)
         self.ax.set_zlabel('Z轴 (mm)', fontsize=10)
-        self.ax.set_title('三维物体重建', fontsize=14, fontweight='bold')
+        self.ax.set_title(self.window_title, fontsize=14, fontweight='bold')
         self.ax.grid(True, alpha=0.3)
 
         # 绘制坐标轴指示器
-        axis_length = 200
-        self.ax.quiver(0, 0, 0, axis_length, 0, 0,
+        self.ax.quiver(0, 0, 0, self.axis_length, 0, 0,
                       color='r', linewidth=2, arrow_length_ratio=0.1, label='X')
-        self.ax.quiver(0, 0, 0, 0, axis_length, 0,
+        self.ax.quiver(0, 0, 0, 0, self.axis_length, 0,
                       color='g', linewidth=2, arrow_length_ratio=0.1, label='Y')
-        self.ax.quiver(0, 0, 0, 0, 0, axis_length,
+        self.ax.quiver(0, 0, 0, 0, 0, self.axis_length,
                       color='b', linewidth=2, arrow_length_ratio=0.1, label='Z')
         self.ax.legend(loc='upper right', fontsize=8)
 
@@ -138,19 +154,24 @@ class Viewer3D:
         """
         self.detected_objects.append(obj_info)
 
-    def draw_pointcloud(self, points_cm: np.ndarray, color: str = 'skyblue',
-                       size: float = 1.0, alpha: float = 0.6):
+    def draw_pointcloud(self, points_cm: np.ndarray, color: Optional[str] = None,
+                       size: Optional[float] = None, alpha: Optional[float] = None):
         """
         绘制点云
 
         Args:
             points_cm: Nx3点云，单位厘米
-            color: 点云颜色
-            size: 点大小
-            alpha: 透明度
+            color: 点云颜色（None则使用配置）
+            size: 点大小（None则使用配置）
+            alpha: 透明度（None则使用配置）
         """
         if points_cm is None or len(points_cm) == 0:
             return
+
+        # 使用配置的默认值
+        color = color or self.pc_color
+        size = size or self.pc_size
+        alpha = alpha or self.pc_alpha
 
         # 转换坐标系并转为mm
         points_viz = transform_camera_to_viz(points_cm, unit_mm=False)
@@ -163,9 +184,8 @@ class Viewer3D:
             return
 
         # 下采样以提高性能
-        max_points = 2000
-        if len(points_viz) > max_points:
-            indices = np.random.choice(len(points_viz), max_points, replace=False)
+        if len(points_viz) > self.pc_max_points:
+            indices = np.random.choice(len(points_viz), self.pc_max_points, replace=False)
             points_viz = points_viz[indices]
 
         # 绘制
@@ -175,18 +195,22 @@ class Viewer3D:
         logger.debug(f"绘制点云: {len(points_viz)} 个点")
 
     def draw_bbox_3d(self, center_cm: np.ndarray, dims_cm: np.ndarray,
-                     color: str = 'lime', linewidth: float = 2.0):
+                     color: Optional[str] = None, linewidth: Optional[float] = None):
         """
         绘制3D包围盒（轴对齐）
 
         Args:
             center_cm: 中心位置 (cm)
             dims_cm: 尺寸 [长,宽,高] (cm)
-            color: 线条颜色
-            linewidth: 线条宽度
+            color: 线条颜色（None则使用配置）
+            linewidth: 线条宽度（None则使用配置）
         """
         if center_cm is None or dims_cm is None:
             return
+
+        # 使用配置的默认值
+        color = color or self.bbox_color
+        linewidth = linewidth or self.bbox_linewidth
 
         # 转换为可视化坐标系 (mm)
         center_mm = center_cm * 10.0
@@ -230,24 +254,28 @@ class Viewer3D:
                           color=color, linewidth=linewidth, alpha=0.8)
 
     def draw_text_3d(self, position_cm: np.ndarray, text: str,
-                     color: str = 'white', fontsize: int = 9):
+                     color: Optional[str] = None, fontsize: Optional[int] = None):
         """
         在3D空间中绘制文本
 
         Args:
             position_cm: 文本位置 (cm)
             text: 文本内容
-            color: 文本颜色
-            fontsize: 字体大小
+            color: 文本颜色（None则使用配置）
+            fontsize: 字体大小（None则使用配置）
         """
         if position_cm is None:
             return
 
+        # 使用配置的默认值
+        color = color or self.label_color
+        fontsize = fontsize or self.label_fontsize
+
         # 转换坐标
         pos_viz = transform_camera_to_viz(position_cm.reshape(1, 3) * 10.0, unit_mm=True)[0]
 
-        # 文本偏移（向上50mm）
-        pos_viz[2] += 50
+        # 文本偏移
+        pos_viz[2] += self.label_offset_z
 
         self.ax.text(pos_viz[0], pos_viz[1], pos_viz[2], text,
                     fontsize=fontsize, color=color,
@@ -262,12 +290,11 @@ class Viewer3D:
         for obj in self.detected_objects:
             # 绘制点云
             if 'points' in obj and obj['points'] is not None:
-                self.draw_pointcloud(obj['points'], color='cyan', size=2.0, alpha=0.5)
+                self.draw_pointcloud(obj['points'])
 
             # 绘制包围盒
             if 'center_cm' in obj and 'dims_cm' in obj:
-                self.draw_bbox_3d(obj['center_cm'], obj['dims_cm'],
-                                color='lime', linewidth=2.0)
+                self.draw_bbox_3d(obj['center_cm'], obj['dims_cm'])
 
                 # 绘制标签
                 label = obj.get('class_name', 'Object')
@@ -277,7 +304,7 @@ class Viewer3D:
                     dims = obj['dims_cm']
                     label += f"\n尺寸: {dims[0]:.1f}×{dims[1]:.1f}×{dims[2]:.1f}cm"
 
-                self.draw_text_3d(obj['center_cm'], label, color='white')
+                self.draw_text_3d(obj['center_cm'], label)
 
         # 使用更安全的更新方式，避免GIL问题
         try:

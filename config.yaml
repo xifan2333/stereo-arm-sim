@@ -122,6 +122,42 @@ detection:
   # 显示窗口
   window: "YOLO Detection"
 
+# 三维重建配置
+reconstruction:
+  # 3D可视化器
+  viewer:
+    # 图形尺寸 (宽, 高)
+    figsize: [12, 9]
+
+    # 坐标轴范围 (mm)
+    x_range: [-400, 400]  # 左右各40cm
+    y_range: [0, 800]     # 深度0-80cm
+    z_range: [-300, 400]  # 垂直-30cm到40cm
+
+    # 坐标轴指示器长度 (mm)
+    axis_length: 200
+
+    # 窗口标题
+    window_title: "三维物体重建"
+
+    # 点云显示
+    pointcloud:
+      color: "cyan"
+      size: 2.0
+      alpha: 0.5
+      max_points: 2000  # 下采样点数
+
+    # 包围盒显示
+    bbox:
+      color: "lime"
+      linewidth: 2.0
+
+    # 文本标签
+    label:
+      color: "white"
+      fontsize: 9
+      offset_z: 50  # 文本向上偏移 (mm)
+
 
 # 日志配置
 logging:
