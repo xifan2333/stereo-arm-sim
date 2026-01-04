@@ -8,6 +8,8 @@
 """
 
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')  # 使用TkAgg后端，与OpenCV兼容性更好
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
@@ -71,6 +73,9 @@ class Viewer3D:
             y_range: Y轴范围 (mm)
             z_range: Z轴范围 (mm)
         """
+        # 启用交互模式
+        plt.ion()
+
         # 设置中文字体
         plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
@@ -272,13 +277,42 @@ class Viewer3D:
 
                 self.draw_text_3d(obj['center_cm'], label, color='white')
 
-        plt.draw()
-        plt.pause(0.001)
+        # 使用更安全的更新方式，避免GIL问题
+        try:
+            self.fig.canvas.draw_idle()
+            self.fig.canvas.flush_events()
+        except Exception as e:
+            logger.debug(f"3D更新失败: {e}")
+            # 回退到简单的draw
+            try:
+                plt.draw()
+            except Exception:
+                pass
 
     def show(self, block: bool = False):
-        """显示窗口"""
-        plt.show(block=block)
+        """
+        显示窗口
+
+        Args:
+            block: 是否阻塞。False时立即返回（交互模式）
+        """
+        if block:
+            plt.ioff()  # 关闭交互模式
+            plt.show()
+        else:
+            # 确保窗口显示
+            self.fig.show()
+            # 立即处理事件
+            try:
+                self.fig.canvas.draw_idle()
+                self.fig.canvas.flush_events()
+            except Exception:
+                pass
 
     def close(self):
         """关闭窗口"""
-        plt.close(self.fig)
+        try:
+            plt.close(self.fig)
+            plt.ioff()  # 关闭交互模式
+        except Exception as e:
+            logger.debug(f"关闭3D窗口失败: {e}")
